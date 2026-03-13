@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json" >
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Planner</title>
+    <style>
+        :root {
+            --b: #fff5f7;
+            --p: #fffbfb;
+            --k: #ff8fab;
+            --d: #fb6f92;
+            --s: #ffc2d1;
+            --i: #ffeef2;
+            --t: #5a3d42;
+            --r: #ff4d6d;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #fff5f7 0%, #ffeef2 100%);
+            color: var(--t);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 50px 20px;
+            min-height: 100vh;
+        }
+
+        .c { 
+            background: var(--p); 
+            padding: 45px; 
+            border-radius: 60px 20px 60px 20px; 
+            width: 100%;
+            max-width: 400px; 
+            box-shadow: 0 25px 50px rgba(251, 111, 146, 0.15); 
+            border: 1px solid var(--s);
+            height: fit-content;
+        }
+
+        h3 { 
+            font-family: 'Playfair Display', serif; 
+            font-size: 1.1rem; 
+            color: var(--d);
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .ds {
+            font-weight: 600;
+            font-size: 3.5rem;
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--t);
+        }
+
+        .u { font-size: 1.8rem; color: var(--k); margin-right: 5px; }
+
+        input { 
+            width: 100%; 
+            box-sizing: border-box;
+            margin-bottom: 15px; 
+            padding: 18px; 
+            background: var(--i); 
+            border: none;
+            border-radius: 18px;
+            color: var(--t);
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .bt { 
+            padding: 18px; 
+            background: var(--k); 
+            color: #fff; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: 600;
+            border-radius: 18px;
+            width: 100%;
+            font-size: 1rem;
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bt:hover { 
+            background: var(--d); 
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(251, 111, 146, 0.3);
+        }
+
+        .cl { 
+            background: transparent; 
+            color: var(--s); 
+            font-size: 0.85rem;
+            margin-top: 15px;
+            padding: 10px;
+            width: 100%;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            font-weight: 500;
+            transition: 0.3s ease;
+        }
+
+        .cl:hover { 
+            color: var(--r); 
+            background: rgba(255, 77, 109, 0.08);
+            border-color: rgba(255, 77, 109, 0.1);
+            transform: scale(0.98);
+        }
+
+        ul { list-style: none; padding: 0; margin-top: 35px; border-top: 1px solid var(--i); }
+
+        li { 
+            padding: 15px 0; 
+            border-bottom: 1px dotted var(--s);
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+        }
+
+        .n { font-weight: 500; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
+        .n i { color: var(--k); font-size: 0.7rem; }
+
+        .v { font-weight: 600; }
+        
+        .x { color: var(--s); cursor: pointer; margin-left: 10px; transition: 0.2s; }
+        .x:hover { color: var(--r); transform: rotate(90deg); }
+    </style>
+</head>
+<body>
+
+<div class="c">
+    <h3>Balance</h3>
+    <div class="ds"><span class="u">&#8369;</span><span id="tt">0.00</span></div>
+    
+    <input type="text" id="it" placeholder="Item Name">
+    <input type="number" id="am" placeholder="0.00">
+
+    <button class="bt" onclick="ad()">Add to List</button>
+    <button class="cl" onclick="cl()">Clear All</button>
+
+    <ul id="ls"></ul>
+</div>
+
+<script>
+    const _u = ""; // supabase url
+    const _k = ""; // Publishable key
+    const sb = supabase.createClient(_u, _k);
+    const _t = document.getElementById('tt');
+    const _l = document.getElementById('ls');
+    const _i = document.getElementById('it');
+    const _a = document.getElementById('am');
+
+    async function sy() {
+        let { data: d, error: e } = await sb.from('budget_db').select('*');
+        if (e) return;
+        _l.innerHTML = "";
+        let s = 0;
+        d.forEach(r => {
+            s += r.amount;
+            let el = document.createElement('li');
+            el.innerHTML = '<div class="n"><i class="fas fa-sparkle"></i> ${r.item}</div><div class="v">&#8369;${r.amount.toFixed(2)}<i class="fas fa-times-circle x" onclick="rm(${r.id})"></i></div>';
+            _l.appendChild(el);
+        });
+        _t.innerText = s.toLocaleString(undefined, {minimumFractionDigits: 2});
+    }
+
+    async function ad() {
+        let n = _i.value, v = parseFloat(_a.value);
+        if (n && v > 0) {
+            await sb.from('budget_db').insert([{ item: n, amount: v }]);
+            sy(); 
+            _i.value = ''; _a.value = '';
+        }
+    }
+
+    async function rm(id) {
+        await sb.from('budget_db').delete().eq('id', id);
+        sy();
+    }
+
+    async function cl() {
+        if(confirm("Wipe list?")) {
+            await sb.from('budget_db').delete().neq('id', 0);
+            sy();
+        }
+    }
+
+    sy();
+
+
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/service-worker.js")
+        .then(() => console.log("Ready"))
+        .catch((e) => console.log(e));
+    }
+</script>
+
+</body>
+</html>
