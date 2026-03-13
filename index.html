@@ -130,12 +130,48 @@
         
         .x { color: var(--s); cursor: pointer; margin-left: 10px; transition: 0.2s; }
         .x:hover { color: var(--r); transform: rotate(90deg); }
+
+        
+        #wallet-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            color: var(--k);
+            font-weight: 600;
+        }
+        
+        .edit-wallet {
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        
+        .edit-wallet:hover {
+            color: var(--d);
+            transform: scale(1.1);
+        }
+
+        #adv-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--i);
+            border-radius: 15px;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            border: 1px solid var(--s);
+        }
     </style>
 </head>
 <body>
 
 <div class="c">
     <h3>Balance</h3>
+    <div id="wallet-container">
+        <span id="wallet-ui">Wallet: ₱0.00</span>
+        <i class="fas fa-pencil-alt edit-wallet" onclick="editWallet()" title="Edit Balance"></i>
+    </div>
     <div class="ds"><span class="u">&#8369;</span><span id="tt">0.00</span></div>
     
     <input type="text" id="it" placeholder="Item Name">
@@ -145,34 +181,52 @@
     <button class="cl" onclick="cl()">Clear All</button>
 
     <ul id="ls"></ul>
+    <div id="adv-box">Analyzing data...</div>
 </div>
 
 <script>
-    const _u = "https://yxunjfzvghbddnqyupwc.supabase.co"; // supabase url
-    const _k = "sb_publishable_2i9sQ3j876-tBFxzrtUvXg_Kg2QZ8go"; // Publishable key
+    const _u = "https://yxunjfzvghbddnqyupwc.supabase.co"; 
+    const _k = "sb_publishable_2i9sQ3j876-tBFxzrtUvXg_Kg2QZ8go"; 
     const sb = supabase.createClient(_u, _k);
     const _t = document.getElementById('tt');
     const _l = document.getElementById('ls');
     const _i = document.getElementById('it');
     const _a = document.getElementById('am');
 
+    let walletAmt = parseFloat(localStorage.getItem('ewallet_bal')) || 5000.00;
+
     async function sy() {
+        const cache = localStorage.getItem('budget_local');
+        if(cache) render(JSON.parse(cache));
+
         let { data: d, error: e } = await sb.from('budget_db').select('*');
         if (e) return;
+        
+        localStorage.setItem('budget_local', JSON.stringify(d));
+        render(d);
+    }
+
+    function render(data) {
         _l.innerHTML = "";
         let s = 0; 
-        d.forEach(r => {
+        data.forEach(r => {
             s += r.amount;
             let el = document.createElement('li');
-            el.innerHTML = `<div class="n"><i class="fas fa-sparkle"></i> ${r.item}</div><div class="v">&#8369;${r.amount.toFixed(2)}<i class="fas fa-times-circle x" onclick="rm(${r.id})"></i></div>`;
+            el.innerHTML = <div class="n"><i class="fas fa-sparkle"></i> ${r.item}</div><div class="v">&#8369;${r.amount.toFixed(2)}<i class="fas fa-times-circle x" onclick="rm(${r.id})"></i></div>;
             _l.appendChild(el);
         });
         _t.innerText = s.toLocaleString(undefined, {minimumFractionDigits: 2});
+        
+        updateWalletDisplay();
+        runAdvisory(s, data);
     }
 
     async function ad() {
         let n = _i.value, v = parseFloat(_a.value);
         if (n && v > 0) {
+            walletAmt -= v;
+            localStorage.setItem('ewallet_bal', walletAmt);
+
             await sb.from('budget_db').insert([{ item: n, amount: v }]);
             sy(); 
             _i.value = ''; _a.value = '';
@@ -191,8 +245,34 @@
         }
     }
 
-    sy();
+    function editWallet() {
+        let newAmt = prompt("Enter new wallet balance:", walletAmt.toFixed(2));
+        if (newAmt !== null && !isNaN(parseFloat(newAmt))) {
+            walletAmt = parseFloat(newAmt);
+            localStorage.setItem('ewallet_bal', walletAmt);
+            updateWalletDisplay();
+            const currentTotal = parseFloat(_t.innerText.replace(/,/g, ''));
+            const currentData = JSON.parse(localStorage.getItem('budget_local') || "[]");
+            runAdvisory(currentTotal, currentData);
+        }
+    }
 
+    function runAdvisory(total, items) {
+        const box = document.getElementById('adv-box');
+        const avg = items.length > 0 ? total / items.length : 0;
+        const predict = avg * 30; 
+        
+        let msg = total > 3000 ? " Spending is high. Try to cut back on non-essentials." : " Your budget is looking healthy!";
+        if(walletAmt < 500) msg = " Wallet is low! Consider pausing extra expenses.";
+
+        box.innerHTML = <strong>Advisory:</strong> ${msg}<br><strong>Prediction:</strong> Monthly spend estimated at ₱${predict.toFixed(2)}.;
+    }
+
+    function updateWalletDisplay() {
+        document.getElementById('wallet-ui').innerText = Wallet: ₱${walletAmt.toFixed(2)};
+    }
+
+    sy();
 
     if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/service-worker.js")
